@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101513">
+  <meta name="description" content="A private, offline-first 5/3/1 workout checklist.">
+  <title>Garage 5/3/1</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css?v=5">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-mark" aria-hidden="true">5·3·1</div>
+    <div>
+      <p class="eyebrow">Garage training</p>
+      <h1>Workout</h1>
+    </div>
+    <span id="connection-status" class="connection-status">SAFARI</span>
+  </header>
+
+  <div id="update-banner" class="update-banner is-hidden" role="status">
+    <span>Update ready</span>
+    <button id="reload-app" class="secondary-button" type="button">Reload</button>
+  </div>
+
+  <main>
+    <section id="view-home" class="view is-active" aria-labelledby="home-title">
+      <div class="hero-card">
+        <p class="eyebrow">Next session</p>
+        <h2 id="home-title">Choose the work</h2>
+
+        <div class="selector-grid">
+          <label>
+            <span>Week</span>
+            <select id="week-select"></select>
+          </label>
+          <label>
+            <span>Day</span>
+            <select id="day-select"></select>
+          </label>
+        </div>
+
+        <div class="session-summary">
+          <div>
+            <span class="summary-label">Estimated</span>
+            <strong id="home-estimate">—</strong>
+          </div>
+          <div>
+            <span class="summary-label">Program</span>
+            <strong id="home-program-status">Ready</strong>
+          </div>
+        </div>
+
+        <button id="start-workout" class="primary-button" type="button">Start workout</button>
+      </div>
+
+      <div id="resume-card" class="info-card is-hidden">
+        <div>
+          <p class="eyebrow">In progress</p>
+          <h3 id="resume-title">Resume workout</h3>
+          <p id="resume-detail" class="muted"></p>
+        </div>
+        <button id="resume-workout" class="secondary-button" type="button">Resume</button>
+      </div>
+
+      <div class="info-card install-card">
+        <div>
+          <p class="eyebrow">Keep it handy</p>
+          <h3>Add to your Home Screen</h3>
+          <p class="muted">In Safari, tap Share, then Add to Home Screen and enable Open as Web App.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-workout" class="view" aria-labelledby="workout-title">
+      <div class="workout-toolbar">
+        <div>
+          <p id="workout-week" class="eyebrow"></p>
+          <h2 id="workout-title">Workout</h2>
+        </div>
+        <button id="pause-workout" class="icon-button" type="button">Pause</button>
+      </div>
+
+      <div id="timer-card" class="timer-card">
+        <div id="current-set-panel">
+          <span class="summary-label">Current set</span>
+          <strong id="current-set-time">Tap Start</strong>
+        </div>
+        <div>
+          <span class="summary-label">Total</span>
+          <strong id="total-time">0:00:00</strong>
+        </div>
+      </div>
+
+      <div class="progress-shell" aria-label="Workout completion">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <p id="progress-copy" class="progress-copy">0 of 0 sets</p>
+
+      <div id="workout-sections"></div>
+
+      <div class="workout-actions">
+        <button id="finish-workout" class="primary-button" type="button" disabled>Finish workout</button>
+        <button id="discard-workout" class="text-button danger" type="button">Discard workout</button>
+      </div>
+    </section>
+
+    <section id="view-history" class="view" aria-labelledby="history-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Completed work</p>
+          <h2 id="history-title">History</h2>
+        </div>
+      </div>
+      <div id="history-list"></div>
+    </section>
+
+    <section id="view-program" class="view" aria-labelledby="program-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Configuration</p>
+          <h2 id="program-title">Program</h2>
+        </div>
+        <span id="program-badge" class="badge">Valid</span>
+      </div>
+
+      <div class="program-card">
+        <h3>Import</h3>
+        <label class="file-button">
+          Choose YAML from Files
+          <input id="program-file" type="file" accept=".yaml,.yml,text/yaml,text/plain">
+        </label>
+
+        <label class="url-field">
+          <span>Load from HTTPS URL</span>
+          <div class="inline-field">
+            <input id="program-url" type="url" inputmode="url" placeholder="https://example.com/program.yaml">
+            <button id="load-program-url" class="secondary-button" type="button">Load</button>
+          </div>
+        </label>
+      </div>
+
+      <div class="program-card">
+        <div class="card-heading-row">
+          <h3>Active YAML</h3>
+          <button id="reset-program" class="text-button" type="button">Reload bundled</button>
+        </div>
+        <textarea id="program-editor" spellcheck="false" aria-label="Program YAML"></textarea>
+        <div id="validation-message" class="validation-message">Ready.</div>
+        <button id="activate-program" class="primary-button" type="button">Validate and activate</button>
+      </div>
+
+      <div class="program-card">
+        <h3>Backup</h3>
+        <p class="muted">Move program settings and history between Safari and the Home Screen app.</p>
+        <div class="button-row">
+          <button id="export-yaml" class="secondary-button" type="button">Export YAML</button>
+          <button id="export-backup" class="secondary-button" type="button">Export backup</button>
+          <label class="file-button button-row-wide">
+            Import backup
+            <input id="backup-file" type="file" accept=".json,application/json">
+          </label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Primary navigation">
+    <button class="nav-button is-active" data-view="home" type="button"><span>Today</span></button>
+    <button class="nav-button" data-view="workout" type="button"><span>Workout</span></button>
+    <button class="nav-button" data-view="history" type="button"><span>History</span></button>
+    <button class="nav-button" data-view="program" type="button"><span>Program</span></button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/js-yaml.min.js"></script>
+  <script src="app.js?v=5" defer></script>
+</body>
+</html>

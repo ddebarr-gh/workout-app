@@ -1,0 +1,284 @@
+reference_weights:
+  training_max:
+    - barbell_overhead_press: 100
+    - barbell_deadlift: 100
+    - barbell_bench_press: 100
+    - barbell_back_squat: 100
+    - barbell_calf_raise: 100
+    - bicep_curl: 10
+
+  non_programmed_weight:
+    - lateral_raise: 10
+    - fly: 10
+    - reverse_fly: 10
+    - wrist_curl: 10
+    - reverse_wrist_curl: 10
+    - bicep_superset: 10
+    - tricep_extension: 10
+    - barbell_incline_press: 100
+    - barbell_row: 100
+
+app_defaults:
+  unit: pounds
+
+  rounding:
+    increment: 5
+    mode: nearest
+    ties: down
+
+  initial_state:
+    week: five-three-one
+    day: bench_day 
+
+  day_order:
+    - overhead_day
+    - deadlift_day
+    - bench_day
+    - squat_day
+
+  timing:
+    warmup_set_interval: 120
+    work_set_interval: 180
+    superset_round_interval: 180
+    measure: seconds
+    interval_basis: start_to_start
+
+prescriptions:
+  warmups:
+    5-3-1_ascending:
+      intensity_basis: training_max
+      sets:
+        - {reps: 5, percent: 0.40}
+        - {reps: 5, percent: 0.50}
+        - {reps: 5, percent: 0.60}
+
+    5-3-1_descending:
+      intensity_basis: training_max
+      sets:
+        - {reps: 5, percent: 0.40}
+        - {reps: 5, percent: 0.50}
+        - {reps: 5, percent: 0.60}
+        - reps: 1
+          intensity:
+            method: top_work_set_offset
+            value: -0.10
+
+    5-3-1_deload:
+      intensity_basis: training_max
+      sets:
+        - {reps: 5, percent: 0.40}
+        - {reps: 5, percent: 0.50}
+
+    bbb_transition:
+      intensity_basis: working_weight
+      sets:
+        - {reps: 5, percent: 0.50}
+        - {reps: 3, percent: 0.75}
+
+  5x5:
+    - sets: 5
+      reps: 5
+      # percentage: 0.75
+
+  3x8:
+    - sets: 3
+      reps: 8
+      # percentage: 0.70
+
+  3x10:
+    - sets: 3
+      reps: 10
+      # percentage: 0.65
+
+  3x21:
+    - sets: 3
+      phases:
+        - {name: lower_partials, reps: 7}
+        - {name: upper_partials, reps: 7}
+        - {name: full_range, reps: 7}
+      # percentage: 0.50
+
+  3x20s:
+    - sets: 3
+      duration: 20
+      measure: seconds
+
+  3x30s:
+    - sets: 3
+      duration: 30
+      measure: seconds
+
+  5-3-1:
+    type: periodized
+    intensity_basis: training_max
+
+    weeks:
+      - name: five
+        sets:
+          - {reps: 5, percent: 0.65}
+          - {reps: 5, percent: 0.75}
+          - {reps: 5, percent: 0.85, amrap: true}
+
+      - name: three
+        sets:
+          - {reps: 3, percent: 0.70}
+          - {reps: 3, percent: 0.80}
+          - {reps: 3, percent: 0.90, amrap: true}
+
+      - name: five-three-one
+        sets:
+          - {reps: 5, percent: 0.75}
+          - {reps: 3, percent: 0.85}
+          - {reps: 1, percent: 0.95, amrap: true}
+
+      - name: deload
+        warmup: 5-3-1_deload
+        sets:
+          - {reps: 5, percent: 0.60}
+          - {reps: 5, percent: 0.60}
+          - {reps: 5, percent: 0.60}
+
+  bbb:
+    sets: 5
+    reps: 10
+    intensity:
+      method: percent_training_max
+      value: 0.50
+
+  bbs:
+    sets: 10
+    reps: 5
+    intensity:
+      method: first_set_last
+
+  fsl:
+    sets: 5
+    reps: 5
+    intensity:
+      method: first_set_last
+
+  bbb_fsl:
+    sets: 5
+    reps: 10
+    intensity:
+      method: first_set_last
+
+plan:
+  overhead_day:
+  - exercise: barbell_overhead_press
+    prescription: 5-3-1
+    warmup: 5-3-1_descending
+    work_set_order: descending
+
+  - exercise: barbell_bench_press
+    prescription: bbb
+    warmup: bbb_transition
+
+  - exercise: barbell_incline_press
+    prescription: 3x10
+
+  - exercise: bicep_curl
+    prescription: 5-3-1
+    warmup: 5-3-1_ascending
+    work_set_order: ascending
+
+  - exercise: tricep_extension
+    prescription: 3x10
+
+  - exercise: plank
+    prescription: 3x30s
+
+  deadlift_day:
+  - exercise: lateral_raise
+    prescription: 3x10
+
+  - exercise: reverse_fly
+    prescription: 3x10
+
+  - exercise: wrist_curl
+    prescription: 3x10
+    superset: wrist
+
+  - exercise: reverse_wrist_curl
+    prescription: 3x10
+    superset: wrist
+
+  - exercise: barbell_deadlift
+    prescription: 5-3-1
+    warmup: 5-3-1_ascending
+    work_set_order: ascending
+
+  - exercise: barbell_row
+    prescription: 3x10
+
+  - exercise: barbell_back_squat
+    prescription: bbb
+    warmup: bbb_transition
+    superset: squat_calf
+
+  - exercise: barbell_calf_raise
+    prescription: bbb
+    warmup: bbb_transition
+    superset: squat_calf
+
+  - exercise: side_plank
+    prescription: 3x20s
+
+  bench_day:
+  - exercise: barbell_bench_press
+    prescription: 5-3-1
+    warmup: 5-3-1_descending
+    work_set_order: descending
+
+  - exercise: barbell_overhead_press
+    prescription: bbb
+    warmup: bbb_transition
+
+  - exercise: fly
+    prescription: 3x10
+
+  - exercise: bicep_superset
+    prescription: 3x21
+
+  - exercise: tricep_extension
+    prescription: 5x5
+
+  - exercise: plank
+    prescription: 3x30s
+
+  squat_day:
+  - exercise: lateral_raise
+    prescription: 3x10
+
+  - exercise: reverse_fly
+    prescription: 3x10
+
+  - exercise: wrist_curl
+    prescription: 3x10
+    superset: wrist
+
+  - exercise: reverse_wrist_curl
+    prescription: 3x10
+    superset: wrist
+
+  - exercise: barbell_back_squat
+    prescription: 5-3-1
+    warmup: 5-3-1_ascending
+    work_set_order: ascending
+    superset: squat_calf
+
+  - exercise: barbell_calf_raise
+    prescription: 5-3-1
+    warmup: 5-3-1_ascending
+    work_set_order: ascending
+    superset: squat_calf
+
+  - exercise: barbell_deadlift
+    prescription: bbb
+    warmup: bbb_transition
+
+  - exercise: chin_up
+    prescription: 3x8
+
+  - exercise: side_plank
+    prescription: 3x20s
