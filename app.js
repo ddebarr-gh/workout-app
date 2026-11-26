@@ -43,6 +43,8 @@
 
     appState = readJson(KEYS.state, null) || initialAppState(program);
     reconcileAppState();
+    ensureActiveInterval();
+    if (currentWorkout) saveJson(KEYS.current, currentWorkout);
     $("#program-editor").value = programYaml;
     $("#program-url").value = localStorage.getItem(KEYS.sourceUrl) || "";
 
@@ -60,7 +62,7 @@
     $("#pause-workout").addEventListener("click", togglePause);
     $("#finish-workout").addEventListener("click", finishWorkout);
     $("#discard-workout").addEventListener("click", discardWorkout);
-    $("#workout-sections").addEventListener("click", handleWorkoutClick);
+    $("#restart-set-timer").addEventListener("click", restartCurrentInterval);
     $("#workout-sections").addEventListener("change", handleWorkoutChange);
     $("#workout-sections").addEventListener("input", handleWorkoutInput);
     $("#program-file").addEventListener("change", importProgramFile);
@@ -217,6 +219,7 @@
   function startWorkout() {
     if (currentWorkout && !confirm("Discard the unfinished workout and start another one?")) return;
     currentWorkout = buildWorkout(appState.week, appState.day, false);
+    startNextPendingInterval(null, currentWorkout.startedAt);
     saveJson(KEYS.current, currentWorkout);
     renderAll();
     showView("workout");
@@ -395,7 +398,8 @@
       container.innerHTML = `<div class="empty-state">Start a workout to see its sets here.</div>`;
       $("#finish-workout").disabled = true;
       $("#pause-workout").disabled = true;
-      $("#current-set-time").textContent = "Tap Start";
+      $("#restart-set-timer").disabled = true;
+      $("#current-set-time").textContent = "—";
       $("#total-time").textContent = "0:00:00";
       $("#current-set-panel").classList.remove("is-ready");
       updateProgress();
@@ -406,6 +410,7 @@
     $("#workout-week").textContent = `${titleCase(currentWorkout.week)} week`;
     $("#pause-workout").disabled = false;
     $("#pause-workout").textContent = currentWorkout.pausedAt ? "Resume" : "Pause";
+    $("#restart-set-timer").disabled = !currentWorkout.activeInterval || Boolean(currentWorkout.pausedAt);
     container.innerHTML = currentWorkout.sections.map(renderSection).join("");
     updateProgress();
     updateTimers();
@@ -429,18 +434,14 @@
   }
 
   function renderSupersetRounds(section, kind, roundCount) {
-    const targetSeconds = intervalSeconds(kind, true);
     let html = "";
     for (let index = 0; index < roundCount; index += 1) {
       const intervalKey = `${section.id}-${kind}-${index}`;
       const active = currentWorkout?.activeInterval?.key === intervalKey;
-      html += `<div class="round-heading">
-        <span>${kind === "warmup" ? "Warm-up" : "Round"} ${index + 1}</span>
-        <button class="set-start-button ${active ? "is-active" : ""}" type="button" data-start-key="${escapeHtml(intervalKey)}" data-start-label="${escapeHtml(`${titleCase(section.id)} ${kind} ${index + 1}`)}" data-target-seconds="${targetSeconds}">${active ? "Timing" : "Start round"}</button>
-      </div>`;
+      html += `<div class="round-heading ${active ? "is-active" : ""}">${kind === "warmup" ? "Warm-up" : "Round"} ${index + 1}</div>`;
       section.members.forEach(member => {
         const set = kind === "warmup" ? member.warmups[index] : member.workSets[index];
-        if (set) html += renderSetRow(set, exerciseLabel(member.exercise), { allowStart: false, intervalKey });
+        if (set) html += renderSetRow(set, exerciseLabel(member.exercise), { intervalKey });
       });
     }
     return html;
@@ -460,16 +461,14 @@
   }
 
   function renderSetRow(set, exerciseName = "", options = {}) {
-    const allowStart = options.allowStart !== false;
     const intervalKey = options.intervalKey || set.id;
     const phaseTarget = set.phases?.map(phase => `${phase.reps} ${phaseLabel(phase.name)}`).join(" + ");
     const target = set.duration != null ? `${set.duration} ${set.measure || "seconds"}` : phaseTarget || `${set.reps}${set.amrap ? "+" : ""} reps`;
     const load = set.weight != null ? `${set.weight} lb` : "Bodyweight";
     const detail = [exerciseName, set.percent != null ? `${Math.round(set.percent * 100)}%` : ""].filter(Boolean).join(" · ");
     const active = currentWorkout?.activeInterval?.key === intervalKey;
-    const startButton = allowStart ? `<button class="set-start-button ${active ? "is-active" : ""}" type="button" data-start-key="${escapeHtml(intervalKey)}" data-start-label="${escapeHtml(`${exerciseLabel(set.exercise)} ${set.kind}`)}" data-target-seconds="${intervalSeconds(set.kind, false)}">${active ? "Timing" : "Start"}</button>` : "";
-    const controls = `${set.amrap ? `<div class="amrap-control"><label for="reps-${escapeHtml(set.id)}">Actual</label><input id="reps-${escapeHtml(set.id)}" data-amrap-id="${escapeHtml(set.id)}" type="number" min="1" inputmode="numeric" value="${set.actualReps ?? ""}" placeholder="reps"></div>` : ""}${startButton}`;
-    return `<div class="set-row ${set.completed ? "is-complete" : ""}" data-set-row="${escapeHtml(set.id)}">
+    const controls = set.amrap ? `<div class="amrap-control"><label for="reps-${escapeHtml(set.id)}">Actual</label><input id="reps-${escapeHtml(set.id)}" data-amrap-id="${escapeHtml(set.id)}" type="number" min="1" inputmode="numeric" value="${set.actualReps ?? ""}" placeholder="reps"></div>` : "";
+    return `<div class="set-row ${set.completed ? "is-complete" : ""} ${active ? "is-active" : ""}" data-set-row="${escapeHtml(set.id)}">
       <input class="set-check" type="checkbox" data-set-id="${escapeHtml(set.id)}" data-interval-key="${escapeHtml(intervalKey)}" ${set.completed ? "checked" : ""} aria-label="Mark ${escapeHtml(target)} complete">
       <div class="set-main"><span class="set-weight">${escapeHtml(load)}</span> × ${escapeHtml(target)}${detail ? `<span class="set-detail">${escapeHtml(detail)}</span>` : ""}</div>
       ${controls ? `<div class="set-controls">${controls}</div>` : ""}
@@ -481,6 +480,89 @@
     if (kind === "warmup") return timing.warmup_set_interval || 120;
     if (isSuperset) return timing.superset_round_interval || timing.work_set_interval || 180;
     return timing.work_set_interval || 180;
+  }
+
+  function workoutIntervals(workout) {
+    const intervals = [];
+    workout.sections.forEach(section => {
+      if (section.kind === "exercise") {
+        [...section.member.warmups, ...section.member.workSets].forEach(set => {
+          intervals.push({
+            key: set.id,
+            label: `${exerciseLabel(set.exercise)} ${set.kind}`,
+            targetSeconds: intervalSeconds(set.kind, false),
+            setIds: [set.id]
+          });
+        });
+        return;
+      }
+
+      for (const kind of ["warmup", "work"]) {
+        const collection = kind === "warmup" ? "warmups" : "workSets";
+        const roundCount = Math.max(...section.members.map(member => member[collection].length));
+        for (let index = 0; index < roundCount; index += 1) {
+          const setIds = section.members.map(member => member[collection][index]?.id).filter(Boolean);
+          intervals.push({
+            key: `${section.id}-${kind}-${index}`,
+            label: `${titleCase(section.id)} ${kind} ${index + 1}`,
+            targetSeconds: intervalSeconds(kind, true),
+            setIds
+          });
+        }
+      }
+    });
+    return intervals;
+  }
+
+  function intervalIsComplete(workout, interval) {
+    return interval.setIds.every(id => findSet(workout, id)?.completed);
+  }
+
+  function startInterval(interval, startedAt = Date.now()) {
+    const pausedAt = currentWorkout.pausedAt ? startedAt : null;
+    currentWorkout.activeInterval = {
+      key: interval.key,
+      label: interval.label,
+      startedAt,
+      targetSeconds: interval.targetSeconds,
+      pausedMs: 0,
+      pausedAt
+    };
+  }
+
+  function startNextPendingInterval(afterKey = null, startedAt = Date.now()) {
+    if (!currentWorkout) return;
+    const intervals = workoutIntervals(currentWorkout);
+    const currentIndex = afterKey == null ? -1 : intervals.findIndex(interval => interval.key === afterKey);
+    const next = intervals.slice(currentIndex + 1).find(interval => !intervalIsComplete(currentWorkout, interval));
+    if (next) startInterval(next, startedAt);
+    else currentWorkout.activeInterval = null;
+  }
+
+  function ensureActiveInterval() {
+    if (!currentWorkout) return;
+    const stats = completionStats(currentWorkout);
+    if (stats.done === stats.total) {
+      currentWorkout.activeInterval = null;
+      return;
+    }
+    const intervals = workoutIntervals(currentWorkout);
+    const active = intervals.find(interval => interval.key === currentWorkout.activeInterval?.key);
+    if (!active || intervalIsComplete(currentWorkout, active)) startNextPendingInterval(active?.key || null);
+  }
+
+  function restartCurrentInterval() {
+    if (!currentWorkout?.activeInterval) return;
+    if (currentWorkout.pausedAt) {
+      showToast("Resume the workout before restarting the timer.");
+      return;
+    }
+    currentWorkout.activeInterval.startedAt = Date.now();
+    currentWorkout.activeInterval.pausedMs = 0;
+    currentWorkout.activeInterval.pausedAt = null;
+    saveJson(KEYS.current, currentWorkout);
+    renderWorkout();
+    showToast("Current set timer restarted.");
   }
 
   function handleWorkoutChange(event) {
@@ -507,26 +589,12 @@
       set.completedAt = null;
       set.durationSeconds = null;
     }
-    persistWorkoutAndRefresh();
-  }
-
-  function handleWorkoutClick(event) {
-    const button = event.target.closest("[data-start-key]");
-    if (!button || !currentWorkout) return;
-    if (currentWorkout.pausedAt) {
-      showToast("Resume the workout before starting a set.");
-      return;
+    const activeKey = currentWorkout.activeInterval?.key;
+    if (checkbox.checked && activeKey === checkbox.dataset.intervalKey) {
+      const active = workoutIntervals(currentWorkout).find(interval => interval.key === activeKey);
+      if (active && intervalIsComplete(currentWorkout, active)) startNextPendingInterval(activeKey);
     }
-    currentWorkout.activeInterval = {
-      key: button.dataset.startKey,
-      label: button.dataset.startLabel,
-      startedAt: Date.now(),
-      targetSeconds: Number(button.dataset.targetSeconds) || 180,
-      pausedMs: 0,
-      pausedAt: null
-    };
-    saveJson(KEYS.current, currentWorkout);
-    renderWorkout();
+    persistWorkoutAndRefresh();
   }
 
   function handleWorkoutInput(event) {
@@ -599,7 +667,7 @@
     const interval = currentWorkout.activeInterval;
     const panel = $("#current-set-panel");
     if (!interval) {
-      $("#current-set-time").textContent = "Tap Start";
+      $("#current-set-time").textContent = completionStats(currentWorkout).done === completionStats(currentWorkout).total ? "Complete" : "—";
       panel.classList.remove("is-ready");
       return;
     }

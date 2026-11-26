@@ -237,6 +237,19 @@ select {
 }
 .timer-card strong { font-size: 1.05rem; }
 .timer-card .is-ready strong { color: var(--amber); }
+.timer-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.timer-heading .summary-label { margin-bottom: 4px; }
+.timer-reset {
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.timer-reset:disabled { visibility: hidden; }
 
 .progress-shell {
   height: 8px;
@@ -272,6 +285,7 @@ select {
   font-size: 0.78rem;
   font-weight: 800;
 }
+.round-heading.is-active { color: var(--accent); }
 
 .set-row {
   display: grid;
@@ -286,6 +300,7 @@ select {
 
 .set-row:first-of-type { border-top: 0; }
 .set-row.is-complete { background: rgba(159, 232, 112, 0.075); }
+.set-row.is-active { box-shadow: inset 3px 0 0 var(--accent); }
 .set-row.is-complete .set-main { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
 
 .set-check {
@@ -303,18 +318,6 @@ select {
 .amrap-control label { color: var(--amber); font-size: 0.73rem; font-weight: 850; text-transform: uppercase; }
 .amrap-control input { width: 62px; height: 42px; padding: 0 8px; text-align: center; }
 .set-controls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.set-start-button {
-  min-height: 38px;
-  padding: 0 11px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface-3);
-  color: var(--text);
-  font-size: 0.76rem;
-  font-weight: 850;
-  white-space: nowrap;
-}
-.set-start-button.is-active { border-color: var(--accent); color: var(--accent); }
 
 .workout-actions { display: grid; gap: 9px; margin-top: 24px; }
 .text-button { border: 0; background: transparent; color: var(--accent); min-height: 44px; font-weight: 750; }

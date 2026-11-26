@@ -1,9 +1,9 @@
-const CACHE = "garage-531-v5";
+const CACHE = "garage-531-v6";
 const ASSETS = [
   "./",
   "index.html",
-  "styles.css?v=5",
-  "app.js?v=5",
+  "styles.css?v=6",
+  "app.js?v=6",
   "program.yaml",
   "manifest.webmanifest",
   "vendor/js-yaml.min.js",

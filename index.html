@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <header class="app-header">
@@ -86,8 +86,11 @@
 
       <div id="timer-card" class="timer-card">
         <div id="current-set-panel">
-          <span class="summary-label">Current set</span>
-          <strong id="current-set-time">Tap Start</strong>
+          <div class="timer-heading">
+            <span class="summary-label">Current set</span>
+            <button id="restart-set-timer" class="timer-reset" type="button" disabled>Restart</button>
+          </div>
+          <strong id="current-set-time">—</strong>
         </div>
         <div>
           <span class="summary-label">Total</span>
@@ -178,6 +181,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="vendor/js-yaml.min.js"></script>
-  <script src="app.js?v=5" defer></script>
+  <script src="app.js?v=6" defer></script>
 </body>
 </html>

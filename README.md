@@ -13,7 +13,7 @@ The app is designed primarily for phones, but it also works in modern desktop br
 - Tickable warm-up and work sets
 - AMRAP (As Many Reps As Possible) repetition recording
 - Superset rounds
-- Current-set and total-workout timers
+- Automatically advancing current-set and total-workout timers
 - Local workout history
 - Backup export and import
 - Offline use after installation
